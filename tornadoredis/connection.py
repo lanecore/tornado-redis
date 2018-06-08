@@ -19,14 +19,13 @@ else:
 
 class Connection(object):
     def __init__(self, host='localhost', port=6379, unix_socket_path=None,
-                 event_handler_proxy=None, stop_after=None, io_loop=None):
+                 event_handler_proxy=None, stop_after=None):
         self.host = host
         self.port = port
         self.unix_socket_path = unix_socket_path
         self._event_handler = event_handler_proxy
         self.timeout = stop_after
         self._stream = None
-        self._io_loop = io_loop
 
         self.in_progress = False
         self.read_callbacks = set()
@@ -72,7 +71,7 @@ class Connection(object):
                         timeout=self.timeout
                     )
                     sock.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
-                self._stream = IOStream(sock, io_loop=self._io_loop)
+                self._stream = IOStream(sock)
                 self._stream.set_close_callback(self.on_stream_close)
                 self.info['db'] = 0
                 self.info['pass'] = None

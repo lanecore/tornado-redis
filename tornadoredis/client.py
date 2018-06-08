@@ -258,9 +258,8 @@ class Client(object):
 #                 'password', 'selected_db', '_pipeline', '_weak')
 
     def __init__(self, host='localhost', port=6379, unix_socket_path=None,
-                 password=None, selected_db=None, io_loop=None,
+                 password=None, selected_db=None,
                  connection_pool=None):
-        self._io_loop = io_loop or IOLoop.current()
         self._connection_pool = connection_pool
         self._weak = weakref.proxy(self)
         if connection_pool:
@@ -269,8 +268,7 @@ class Client(object):
         else:
             connection = Connection(host=host, port=port,
                                     unix_socket_path=unix_socket_path,
-                                    event_handler_proxy=self._weak,
-                                    io_loop=self._io_loop)
+                                    event_handler_proxy=self._weak)
         self.connection = connection
         self.subscribed = set()
         self.subscribe_callbacks = deque()
@@ -344,8 +342,7 @@ class Client(object):
             self._pipeline = Pipeline(
                 transactional=transactional,
                 selected_db=self.selected_db,
-                password=self.password,
-                io_loop=self._io_loop,
+                password=self.password
             )
             self._pipeline.connection = self.connection
         return self._pipeline
@@ -1152,7 +1149,7 @@ class Client(object):
         for cb_channels, cb in self.unsubscribe_callbacks:
             cb_channels.difference_update(channels)
             if not cb_channels:
-                self._io_loop.add_callback(cb)
+                IOLoop.current().add_callback(cb)
 
     def unsubscribe(self, channels, callback=None):
         self._unsubscribe('UNSUBSCRIBE', channels, callback=callback)
@@ -1559,8 +1556,10 @@ class Lock(object):
 
             # Otherwise, we "sleep" for an amount of time equal to the polling interval, after which
             # we will try getting the lock again.
-            yield gen.Task(self.redis_client._io_loop.add_timeout,
-                           self.redis_client._io_loop.time() + self.polling_interval)
+            # yield gen.Task(self.redis_client._io_loop.add_timeout,
+            #                self.redis_client._io_loop.time() + self.polling_interval)
+            yield gen.Task(self.redis_client.add_timeout,
+                           self.redis_client.time() + self.polling_interval)
 
     @gen.engine
     def release(self, callback=None):
